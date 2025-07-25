@@ -145,7 +145,7 @@
         }
 
         // Compressão inteligente de fotos
-        function comprimirFoto(file, maxWidth = 1200, quality = 0.85) {
+        function comprimirFoto(file, maxWidth = 2048, quality = 0.95) {
             return new Promise((resolve, reject) => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
@@ -214,8 +214,24 @@
             }
         }
 
+        // Configuração salvamento (x recibos)
+        const CONFIG_SALVAMENTO = {
+            frequencia: 1, // Salva a cada X recibos
+            contador: 0    // Contador atual
+        };
+        
         // Sistema de Storage Inteligente
-        async function salvarCSVAtualizado() {
+        async function salvarCSVAtualizado(forcado = false) {
+            // Incrementa contador apenas se não for forçado
+            if (!forcado) {
+                CONFIG_SALVAMENTO.contador++;
+                // Só salva se atingiu a frequência
+                if (CONFIG_SALVAMENTO.contador < CONFIG_SALVAMENTO.frequencia) {
+                    return;
+                }
+                // Reset contador
+                CONFIG_SALVAMENTO.contador = 0;
+            }
             try {
                 const headers = 'Data;Nome;Descrição;Valor;Categoria;Mês;Ano;Foto\n';
                 const csvContent = state.recibos.map(r => {
@@ -782,20 +798,37 @@
                     const conteudo = e.target.result;
                     const linhas = conteudo.split('\n').slice(1);
                     const novosRecibos = [];
+                    let fotosImportadas = 0;
 
                     linhas.forEach((linha, index) => {
                         if (linha.trim()) {
-                            const [data, nome, descricao, valor, categoria] = linha.split(';');
+                            const [data, nome, descricao, valor, categoria, mes, ano, foto] = linha.split(';');
                             if (data && nome && descricao && valor) {
-                                novosRecibos.push({
-                                    id: Date.now() + index,
-                                    data: data.split('/').reverse().join('-'),
+                                const recibo = {
+                                    id: `imported_${Date.now()}_${index}`,
+                                    data: data.includes('/') ? data.split('/').reverse().join('-') : data,
                                     nome: nome.trim(),
                                     descricao: descricao.trim(),
                                     valor: parseFloat(valor.replace(',', '.')),
                                     categoria: categoria ? categoria.trim() : 'Outros',
                                     dataAdd: new Date().toISOString()
-                                });
+                                };
+                                
+                                // Preserva foto se existir
+                                if (foto && foto.trim()) {
+                                    recibo.fotoNome = foto.trim();
+                                    fotosImportadas++;
+                                }
+                                
+                                // Verifica duplicatas baseado em data+nome+valor
+                                const chave = `${recibo.data}_${recibo.nome}_${recibo.valor}`;
+                                const jaExiste = state.recibos.some(r => 
+                                    `${r.data}_${r.nome}_${r.valor}` === chave
+                                );
+                                
+                                if (!jaExiste) {
+                                    novosRecibos.push(recibo);
+                                }
                             }
                         }
                     });
@@ -803,8 +836,15 @@
                     if (novosRecibos.length > 0) {
                         state.recibos = [...novosRecibos, ...state.recibos];
                         saveData();
+                        salvarCSVAtualizado(true); // Força salvamento
                         render();
-                        alert(`✅ ${novosRecibos.length} recibos carregados com sucesso!`);
+                        
+                        const mensagem = `✅ ${novosRecibos.length} recibos importados com sucesso!`;
+                        if (fotosImportadas > 0) {
+                            alert(`${mensagem}\n📷 ${fotosImportadas} fotos referenciadas (você pode precisar re-adicionar as fotos manualmente)`);
+                        } else {
+                            alert(mensagem);
+                        }
                     } else {
                         alert('❌ Nenhum recibo válido encontrado no arquivo.');
                     }
@@ -1706,6 +1746,36 @@
                 }, 15000);
             });
         }
+        
+        // Detecção de dados vazios
+        function detectarDadosVazios() {
+            return state.recibos.length === 0;
+        }
+        
+        function mostrarAlertaDadosVazios() {
+            if (detectarDadosVazios()) {
+                setTimeout(() => {
+                    const resposta = confirm(
+                        '🚨 DADOS VAZIOS DETECTADOS\n\n' +
+                        'Parece que você não tem nenhum recibo salvo.\n\n' +
+                        '📋 Se você já tinha recibos antes:\n' +
+                        '• Pode ter perdido dados por limpeza de cache\n' +
+                        '• Você pode importar um backup CSV\n\n' +
+                        '🔄 Quer importar seus dados agora?\n\n' +
+                        '💬 Se precisar de ajuda, entre em contato com Felipe!'
+                    );
+                    
+                    if (resposta) {
+                        // Criar input de arquivo temporário
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.csv';
+                        input.onchange = carregarBackup;
+                        input.click();
+                    }
+                }, 2000); // Aguarda 2s para app carregar
+            }
+        }
 
         // Inicialização
         if (document.readyState === 'loading') {
@@ -1715,6 +1785,7 @@
                 iniciarTimerBackupSemanal();
                 registrarServiceWorker();
                 mostrarBotaoInstalar();
+                mostrarAlertaDadosVazios();
             });
         } else {
             loadData();
@@ -1722,6 +1793,7 @@
             iniciarTimerBackupSemanal();
             registrarServiceWorker();
             mostrarBotaoInstalar();
+            mostrarAlertaDadosVazios();
         }
     </script>
 </body>
