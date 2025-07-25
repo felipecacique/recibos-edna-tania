@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Recibos - Edna e Tânia</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Recibos">
+    <meta name="description" content="Controle de recibos para Edna e Tânia">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlJlY2lib3MgLSBFZG5hIGUgVMOibmlhIiwKICAic2hvcnRfbmFtZSI6ICJSZWNpYm9zIiwKICAic3RhcnRfdXJsIjogIi4vIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjNEY0NkU1IiwKICAidGhlbWVfY29sb3IiOiAiIzRGNDZFNSIsCiAgImRlc2NyaXB0aW9uIjogIkNvbnRyb2xlIGRlIHJlY2lib3MgcGFyYSBFZG5hIGUgVMOibmlhIiwKICAib3JpZW50YXRpb24iOiAicG9ydHJhaXQtcHJpbWFyeSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnPjxyZWN0IHdpZHRoPScxMDAnIGhlaWdodD0nMTAwJyBmaWxsPScjNEY0NkU1Jz48L3JlY3Q+PHRleHQgeD0nNTAlJyB5PSc2MCUnIGZvbnQtc2l6ZT0nNDUnIGZpbGw9J3doaXRlJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJz7wn5ONPC90ZXh0Pjwvc3ZnPiIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIsCiAgICAgICJwdXJwb3NlIjogImFueSIKICAgIH0sCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLDxzdmcgdmlld0JveD0nMCAwIDEwMCAxMDAnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zyc+PHJlY3Qgd2lkdGg9JzEwMCcgaGVpZ2h0PScxMDAnIGZpbGw9JyM0RjQ2RTUnPjwvcmVjdD48dGV4dCB4PSc1MCUnIHk9JzYwJScgZm9udC1zaXplPSc0NScgZmlsbD0nd2hpdGUnIHRleHQtYW5jaG9yPSdtaWRkbGUnPvCfk408L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0KfQ==">
+    
+    <!-- Ícones Apple -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><rect width='100' height='100' fill='%234F46E5'></rect><text x='50%' y='60%' font-size='45' fill='white' text-anchor='middle'>📋</text></svg>">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><rect width='100' height='100' fill='%234F46E5'></rect><text x='50%' y='60%' font-size='45' fill='white' text-anchor='middle'>📋</text></svg>">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- JSZip Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        input, textarea, select {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app">Carregando...</div>
+
+    <script>
+        // App State
+        let state = {
+            activeTab: 'inicio',
+            recibos: [],
+            showAddForm: false,
+            viewMode: 'mes',
+            selectedDate: new Date(),
+            editingId: null,
+            formData: {
+                nome: '',
+                data: new Date().toISOString().split('T')[0],
+                descricao: '',
+                valor: '',
+                categoria: 'Outros',
+                foto: null,
+                fotoNome: ''
+            }
+        };
+
+        const categorias = [
+            'Taxi/Transporte',
+            'Roupas', 
+            'Medicamentos',
+            'Alimentação',
+            'Casa/Utilidades',
+            'Outros'
+        ];
+
+        // Database para fotos
+        let db = null;
+        
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('RecibosDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('fotos')) {
+                        db.createObjectStore('fotos', { keyPath: 'nome' });
+                    }
+                };
+            });
+        }
+
+        function salvarFoto(nome, dadosFoto) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject('Database não inicializado');
+                    return;
+                }
+                
+                const transaction = db.transaction(['fotos'], 'readwrite');
+                const store = transaction.objectStore('fotos');
+                const request = store.put({ nome: nome, dados: dadosFoto });
+                
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function carregarFoto(nome) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject('Database não inicializado');
+                    return;
+                }
+                
+                const transaction = db.transaction(['fotos'], 'readonly');
+                const store = transaction.objectStore('fotos');
+                const request = store.get(nome);
+                
+                request.onsuccess = () => {
+                    resolve(request.result ? request.result.dados : null);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function gerarNomeFoto() {
+            const agora = new Date();
+            const ano = agora.getFullYear();
+            const mes = String(agora.getMonth() + 1).padStart(2, '0');
+            const dia = String(agora.getDate()).padStart(2, '0');
+            const hora = String(agora.getHours()).padStart(2, '0');
+            const min = String(agora.getMinutes()).padStart(2, '0');
+            const seg = String(agora.getSeconds()).padStart(2, '0');
+            
+            const nome = state.formData.nome || 'Recibo';
+            const valor = state.formData.valor.replace(',', '-').replace('.', '-') || '00-00';
+            
+            return `${ano}-${mes}-${dia}_${hora}${min}${seg}_${nome}_${valor}.webp`;
+        }
+
+        // Compressão inteligente de fotos
+        function comprimirFoto(file, maxWidth = 1200, quality = 0.85) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    // Calcula dimensões mantendo proporção
+                    let { width, height } = img;
+                    if (width > maxWidth) {
+                        height = (height * maxWidth) / width;
+                        width = maxWidth;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Desenha imagem redimensionada
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Tenta WebP primeiro (melhor compressão)
+                    canvas.toBlob((webpBlob) => {
+                        if (webpBlob) {
+                            // WebP funcionou
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(webpBlob);
+                        } else {
+                            // Fallback para JPEG
+                            canvas.toBlob((jpegBlob) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(reader.result);
+                                reader.onerror = reject;
+                                reader.readAsDataURL(jpegBlob);
+                            }, 'image/jpeg', quality);
+                        }
+                    }, 'image/webp', quality);
+                };
+                
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('recibos-data');
+                if (saved) {
+                    state.recibos = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.log('Erro ao carregar dados:', e);
+                state.recibos = [];
+            }
+            
+            initDB().catch(err => console.log('Erro ao inicializar DB:', err));
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('recibos-data', JSON.stringify(state.recibos));
+                // Atualiza CSV automaticamente a cada mudança
+                salvarCSVAtualizado();
+            } catch (e) {
+                console.log('Erro ao salvar dados:', e);
+            }
+        }
+
+        // Sistema de Storage Inteligente
+        async function salvarCSVAtualizado() {
+            try {
+                const headers = 'Data;Nome;Descrição;Valor;Categoria;Mês;Ano;Foto\n';
+                const csvContent = state.recibos.map(r => {
+                    const data = new Date(r.data);
+                    const mes = data.toLocaleDateString('pt-BR', { month: 'long' });
+                    const ano = data.getFullYear();
+                    const foto = r.fotoNome || '';
+                    return `${data.toLocaleDateString('pt-BR')};${r.nome};${r.descricao};${r.valor.toFixed(2).replace('.', ',')};${r.categoria};${mes};${ano};${foto}`;
+                }).join('\n');
+                
+                const csvFinal = headers + csvContent;
+                const timestamp = new Date().toISOString();
+                
+                // Salva CSV sempre atualizado
+                localStorage.setItem('recibos-csv-atual', csvFinal);
+                localStorage.setItem('recibos-csv-timestamp', timestamp);
+                
+                // Download automático do CSV atualizado na pasta recibos
+                downloadCSVAutomatico(csvFinal, '[RECIBOS] recibos_completo.csv');
+                
+                console.log('CSV atualizado automaticamente');
+            } catch (e) {
+                console.log('Erro ao salvar CSV:', e);
+            }
+        }
+
+        function downloadCSVAutomatico(csvContent, nomeArquivo) {
+            try {
+                // Verifica se deve fazer download automático (evita spam de downloads)
+                const ultimoDownload = localStorage.getItem('ultimo-download-csv');
+                const agora = Date.now();
+                const intervaloMinimo = 5000; // 5 segundos entre downloads
+                
+                if (!ultimoDownload || (agora - parseInt(ultimoDownload)) >= intervaloMinimo) {
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = nomeArquivo;
+                    link.style.display = 'none';
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                    
+                    localStorage.setItem('ultimo-download-csv', agora.toString());
+                    console.log('CSV baixado automaticamente:', nomeArquivo);
+                }
+            } catch (e) {
+                console.log('Erro no download automático:', e);
+            }
+        }
+
+        async function salvarFotoPersistente(nomeArquivo, dadosFoto) {
+            try {
+                // Salva no storage persistente (localStorage para fotos pequenas comprimidas)
+                const fotoKey = `foto-storage-${nomeArquivo}`;
+                localStorage.setItem(fotoKey, dadosFoto);
+                
+                // Salva também no cache IndexedDB para acesso rápido
+                await salvarFoto(nomeArquivo, dadosFoto);
+                
+                // Gerencia cache inteligente
+                await gerenciarCacheInteligente();
+                
+                // Download automático da foto para subpasta imagens
+                downloadFotoAutomatico(dadosFoto, '[IMAGEM] ' + nomeArquivo);
+                
+                console.log('Foto salva no storage persistente e cache');
+            } catch (e) {
+                console.log('Erro ao salvar foto persistente:', e);
+            }
+        }
+
+        function downloadFotoAutomatico(dadosFoto, nomeArquivo) {
+            try {
+                // Converte base64 para blob
+                const base64Data = dadosFoto.split(',')[1];
+                const mimeType = dadosFoto.split(',')[0].split(':')[1].split(';')[0];
+                
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: mimeType });
+                
+                // Download da foto
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = nomeArquivo;
+                link.style.display = 'none';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+                
+                console.log('Foto baixada automaticamente:', nomeArquivo);
+            } catch (e) {
+                console.log('Erro no download automático da foto:', e);
+            }
+        }
+
+        async function gerenciarCacheInteligente() {
+            try {
+                if (!db) return;
+                
+                const transaction = db.transaction(['fotos'], 'readonly');
+                const store = transaction.objectStore('fotos');
+                const request = store.getAll();
+                
+                request.onsuccess = async () => {
+                    const todasFotos = request.result;
+                    const limiteFotos = 10;
+                    
+                    // Se tem mais de 10 fotos no cache, remove as mais antigas
+                    if (todasFotos.length > limiteFotos) {
+                        // Ordena por nome (que tem timestamp) - mais antigas primeiro
+                        const fotosOrdenadas = todasFotos.sort((a, b) => a.nome.localeCompare(b.nome));
+                        const fotosParaRemover = fotosOrdenadas.slice(0, todasFotos.length - limiteFotos);
+                        
+                        const deleteTransaction = db.transaction(['fotos'], 'readwrite');
+                        const deleteStore = deleteTransaction.objectStore('fotos');
+                        
+                        fotosParaRemover.forEach(foto => {
+                            deleteStore.delete(foto.nome);
+                            console.log(`Foto removida do cache: ${foto.nome}`);
+                        });
+                    }
+                    
+                    // Verifica uso de storage
+                    await verificarUsageStorage();
+                };
+            } catch (e) {
+                console.log('Erro ao gerenciar cache:', e);
+            }
+        }
+
+        async function verificarUsageStorage() {
+            try {
+                if ('storage' in navigator && 'estimate' in navigator.storage) {
+                    const estimate = await navigator.storage.estimate();
+                    const usado = estimate.usage || 0;
+                    const disponivel = estimate.quota || 0;
+                    const percentual = (usado / disponivel) * 100;
+                    
+                    console.log(`Storage: ${(usado/1024/1024).toFixed(2)}MB / ${(disponivel/1024/1024).toFixed(2)}MB (${percentual.toFixed(1)}%)`);
+                    
+                    // Se usar mais de 50% do storage, limpa cache mais agressivamente
+                    if (percentual > 50) {
+                        await limpezaCacheAgressiva();
+                    }
+                }
+            } catch (e) {
+                console.log('Erro ao verificar storage:', e);
+            }
+        }
+
+        async function limpezaCacheAgressiva() {
+            try {
+                if (!db) return;
+                
+                const transaction = db.transaction(['fotos'], 'readwrite');
+                const store = transaction.objectStore('fotos');
+                const request = store.getAll();
+                
+                request.onsuccess = () => {
+                    const todasFotos = request.result;
+                    // Mantém apenas as 5 fotos mais recentes em cache agressivo
+                    const fotosOrdenadas = todasFotos.sort((a, b) => b.nome.localeCompare(a.nome));
+                    const fotosParaRemover = fotosOrdenadas.slice(5);
+                    
+                    fotosParaRemover.forEach(foto => {
+                        store.delete(foto.nome);
+                        console.log(`Cache agressivo - foto removida: ${foto.nome}`);
+                    });
+                };
+            } catch (e) {
+                console.log('Erro na limpeza agressiva:', e);
+            }
+        }
+
+        async function carregarFotoInteligente(nomeArquivo) {
+            try {
+                // Primeiro tenta do cache IndexedDB (mais rápido)
+                const dadosCache = await carregarFoto(nomeArquivo);
+                if (dadosCache) {
+                    return dadosCache;
+                }
+                
+                // Se não está no cache, carrega do storage persistente
+                const fotoKey = `foto-storage-${nomeArquivo}`;
+                const dadosStorage = localStorage.getItem(fotoKey);
+                if (dadosStorage) {
+                    // Recoloca no cache para próximos acessos
+                    await salvarFoto(nomeArquivo, dadosStorage);
+                    return dadosStorage;
+                }
+                
+                return null;
+            } catch (e) {
+                console.log('Erro ao carregar foto inteligente:', e);
+                return null;
+            }
+        }
+
+        function criarBackupSemanal() {
+            try {
+                const agora = new Date();
+                const csvAtual = localStorage.getItem('recibos-csv-atual');
+                
+                if (csvAtual) {
+                    const nomeBackup = `recibos_backup_${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}.csv`;
+                    const backupKey = `backup-${agora.getTime()}`;
+                    
+                    const backup = {
+                        nome: nomeBackup,
+                        data: agora.toISOString(),
+                        conteudo: csvAtual
+                    };
+                    
+                    localStorage.setItem(backupKey, JSON.stringify(backup));
+                    
+                    // Atualiza lista de backups
+                    const backupsExistentes = JSON.parse(localStorage.getItem('lista-backups') || '[]');
+                    backupsExistentes.push({
+                        key: backupKey,
+                        nome: nomeBackup,
+                        data: agora.toISOString()
+                    });
+                    
+                    // Mantém apenas os últimos 10 backups
+                    const backupsLimitados = backupsExistentes.slice(-10);
+                    localStorage.setItem('lista-backups', JSON.stringify(backupsLimitados));
+                    
+                    // Download automático do backup na subpasta backups
+                    downloadCSVAutomatico(csvAtual, '[BACKUP] ' + nomeBackup);
+                    
+                    console.log('Backup semanal criado:', nomeBackup);
+                    return nomeBackup;
+                }
+            } catch (e) {
+                console.log('Erro ao criar backup:', e);
+            }
+        }
+
+        function setState(newState) {
+            Object.assign(state, newState);
+            render();
+        }
+
+        function navigateDate(direction) {
+            const newDate = new Date(state.selectedDate);
+            if (state.viewMode === 'mes') {
+                newDate.setMonth(newDate.getMonth() + direction);
+            } else {
+                newDate.setFullYear(newDate.getFullYear() + direction);
+            }
+            setState({ selectedDate: newDate });
+        }
+
+        function getDateLabel() {
+            if (state.viewMode === 'mes') {
+                return state.selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            } else {
+                return state.selectedDate.getFullYear().toString();
+            }
+        }
+
+        function getRecibosContextuais() {
+            if (state.viewMode === 'mes') {
+                return state.recibos.filter(r => {
+                    const dataRecibo = new Date(r.data);
+                    return dataRecibo.getMonth() === state.selectedDate.getMonth() && 
+                           dataRecibo.getFullYear() === state.selectedDate.getFullYear();
+                });
+            } else {
+                return state.recibos.filter(r => {
+                    const dataRecibo = new Date(r.data);
+                    return dataRecibo.getFullYear() === state.selectedDate.getFullYear();
+                });
+            }
+        }
+
+        function getTotaisPorPessoa(recibosList) {
+            if (!recibosList) recibosList = getRecibosContextuais();
+            const totais = { Edna: 0, Tânia: 0 };
+            recibosList.forEach(r => {
+                totais[r.nome] = (totais[r.nome] || 0) + r.valor;
+            });
+            return totais;
+        }
+
+        function handleAddRecibo() {
+            if (!state.formData.nome || !state.formData.descricao || !state.formData.valor) {
+                alert('Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
+
+            const valorNumerico = parseFloat(state.formData.valor.toString().replace(',', '.'));
+            if (isNaN(valorNumerico) || valorNumerico <= 0) {
+                alert('Por favor, digite um valor válido maior que zero');
+                return;
+            }
+
+            const reciboData = {
+                nome: state.formData.nome,
+                data: state.formData.data,
+                descricao: state.formData.descricao,
+                valor: valorNumerico,
+                categoria: state.formData.categoria,
+                fotoNome: state.formData.fotoNome || null
+            };
+
+            if (state.editingId) {
+                const index = state.recibos.findIndex(r => r.id === state.editingId);
+                if (index !== -1) {
+                    state.recibos[index] = {
+                        ...state.recibos[index],
+                        ...reciboData,
+                        editadoEm: new Date().toISOString()
+                    };
+                }
+            } else {
+                const novoRecibo = {
+                    id: Date.now(),
+                    ...reciboData,
+                    dataAdd: new Date().toISOString()
+                };
+                state.recibos = [novoRecibo, ...state.recibos];
+            }
+
+            saveData();
+            
+            setState({
+                formData: {
+                    nome: '',
+                    data: new Date().toISOString().split('T')[0],
+                    descricao: '',
+                    valor: '',
+                    categoria: 'Outros',
+                    foto: null,
+                    fotoNome: ''
+                },
+                showAddForm: false,
+                editingId: null,
+                activeTab: 'inicio'
+            });
+        }
+
+        function editRecibo(id) {
+            const recibo = state.recibos.find(r => r.id === id);
+            if (recibo) {
+                setState({
+                    formData: {
+                        nome: recibo.nome,
+                        data: recibo.data,
+                        descricao: recibo.descricao,
+                        valor: recibo.valor.toString().replace('.', ','),
+                        categoria: recibo.categoria,
+                        foto: null,
+                        fotoNome: recibo.fotoNome || ''
+                    },
+                    showAddForm: true,
+                    editingId: id
+                });
+            }
+        }
+
+        function deleteRecibo(id) {
+            if (confirm('Tem certeza que deseja excluir este recibo?')) {
+                state.recibos = state.recibos.filter(r => r.id !== id);
+                saveData();
+                render();
+            }
+        }
+
+        function tirarFoto() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+            
+            input.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    try {
+                        // Comprime foto (2MB → ~200KB)
+                        const fotoComprimida = await comprimirFoto(file);
+                        const nomeArquivo = gerarNomeFoto();
+                        
+                        // Salva foto no storage persistente e cache
+                        await salvarFotoPersistente(nomeArquivo, fotoComprimida);
+                        
+                        state.formData.foto = fotoComprimida;
+                        state.formData.fotoNome = nomeArquivo;
+                        
+                        render();
+                    } catch (err) {
+                        console.error('Erro ao processar foto:', err);
+                        alert('Erro ao processar foto. Tente novamente.');
+                    }
+                }
+            };
+            
+            input.click();
+        }
+
+        function removerFoto() {
+            state.formData.foto = null;
+            state.formData.fotoNome = '';
+            render();
+        }
+
+        async function gerarZIPCompleto() {
+            if (!window.JSZip) {
+                throw new Error('JSZip não carregado');
+            }
+
+            const zip = new JSZip();
+            
+            const headers = 'Data;Nome;Descrição;Valor;Categoria;Mês;Ano;Foto\n';
+            const csvContent = state.recibos.map(r => {
+                const data = new Date(r.data);
+                const mes = data.toLocaleDateString('pt-BR', { month: 'long' });
+                const ano = data.getFullYear();
+                const foto = r.fotoNome || '';
+                return `${data.toLocaleDateString('pt-BR')};${r.nome};${r.descricao};${r.valor.toFixed(2).replace('.', ',')};${r.categoria};${mes};${ano};${foto}`;
+            }).join('\n');
+            
+            const csvFinal = headers + csvContent;
+            const nomeCSV = `recibos_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
+            
+            zip.file(nomeCSV, csvFinal);
+            
+            const fotosFolder = zip.folder('fotos');
+            const fotosComPromise = state.recibos
+                .filter(r => r.fotoNome)
+                .map(async r => {
+                    try {
+                        const dadosFoto = await carregarFotoInteligente(r.fotoNome);
+                        if (dadosFoto) {
+                            const base64Data = dadosFoto.split(',')[1];
+                            fotosFolder.file(r.fotoNome, base64Data, { base64: true });
+                        }
+                    } catch (err) {
+                        console.error('Erro ao carregar foto:', r.fotoNome, err);
+                    }
+                });
+            
+            await Promise.all(fotosComPromise);
+            
+            return await zip.generateAsync({ type: 'blob' });
+        }
+
+        function compartilharWhatsApp() {
+            gerarZIPCompleto().then(zipBlob => {
+                const nomeArquivo = `Backup_Completo_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.zip`;
+                const file = new File([zipBlob], nomeArquivo, { type: 'application/zip' });
+                
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    const totaisGerais = getTotaisPorPessoa(state.recibos);
+                    const totalGeral = totaisGerais.Edna + totaisGerais.Tânia;
+                    
+                    const mensagem = `📋 BACKUP COMPLETO - Todos os Recibos\n\n` +
+                        `💰 Edna: R$ ${totaisGerais.Edna.toFixed(2).replace('.', ',')}\n` +
+                        `💰 Tânia: R$ ${totaisGerais.Tânia.toFixed(2).replace('.', ',')}\n` +
+                        `📊 TOTAL GERAL: R$ ${totalGeral.toFixed(2).replace('.', ',')}\n` +
+                        `🗂️ Total de recibos: ${state.recibos.length}\n\n` +
+                        `📦 Arquivo ZIP com CSV + todas as fotos dos recibos!`;
+                    
+                    navigator.share({
+                        title: 'Backup de Recibos - Edna e Tânia',
+                        text: mensagem,
+                        files: [file]
+                    }).catch(err => {
+                        downloadZIP(zipBlob, nomeArquivo);
+                        abrirWhatsAppComMensagemZIP();
+                    });
+                } else {
+                    downloadZIP(zipBlob, nomeArquivo);
+                    setTimeout(abrirWhatsAppComMensagemZIP, 1000);
+                }
+            }).catch(err => {
+                console.error('Erro ao gerar ZIP:', err);
+                alert('Erro ao gerar backup. Tente novamente.');
+            });
+        }
+
+        function downloadZIP(zipBlob, nomeArquivo) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(zipBlob);
+            link.download = nomeArquivo;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+        
+        function abrirWhatsAppComMensagemZIP() {
+            const totaisGerais = getTotaisPorPessoa(state.recibos);
+            const totalGeral = totaisGerais.Edna + totaisGerais.Tânia;
+            
+            const mensagem = `📋 BACKUP COMPLETO - Todos os Recibos\n\n` +
+                `💰 Edna: R$ ${totaisGerais.Edna.toFixed(2).replace('.', ',')}\n` +
+                `💰 Tânia: R$ ${totaisGerais.Tânia.toFixed(2).replace('.', ',')}\n` +
+                `📊 TOTAL GERAL: R$ ${totalGeral.toFixed(2).replace('.', ',')}\n` +
+                `🗂️ Total de recibos: ${state.recibos.length}\n\n` +
+                `📦 Arquivo ZIP baixado com CSV + todas as fotos!\n` +
+                `📂 Vá nos Downloads e anexe na conversa`;
+            
+            const urlWhats = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
+            window.open(urlWhats, '_blank');
+        }
+
+        function exportarCSV(periodo) {
+            let dadosExport = [];
+            let nomeArquivo = '';
+            
+            if (periodo === 'atual') {
+                dadosExport = getRecibosContextuais();
+                nomeArquivo = state.viewMode === 'mes' 
+                    ? `Recibos_${getDateLabel().replace(' ', '_')}.csv`
+                    : `Recibos_Ano_${state.selectedDate.getFullYear()}.csv`;
+            } else {
+                dadosExport = state.recibos;
+                nomeArquivo = `Backup_Completo_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
+            }
+
+            const headers = 'Data;Nome;Descrição;Valor;Categoria;Mês;Ano;Foto\n';
+            const csvContent = dadosExport.map(r => {
+                const data = new Date(r.data);
+                const mes = data.toLocaleDateString('pt-BR', { month: 'long' });
+                const ano = data.getFullYear();
+                const foto = r.fotoNome || '';
+                return `${data.toLocaleDateString('pt-BR')};${r.nome};${r.descricao};${r.valor.toFixed(2).replace('.', ',')};${r.categoria};${mes};${ano};${foto}`;
+            }).join('\n');
+
+            const csvFinal = headers + csvContent;
+            downloadCSV(csvFinal, nomeArquivo);
+            return nomeArquivo;
+        }
+
+        function downloadCSV(csvContent, nomeArquivo) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = nomeArquivo;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+
+        function carregarBackup(event) {
+            const arquivo = event.target.files[0];
+            if (!arquivo) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const conteudo = e.target.result;
+                    const linhas = conteudo.split('\n').slice(1);
+                    const novosRecibos = [];
+
+                    linhas.forEach((linha, index) => {
+                        if (linha.trim()) {
+                            const [data, nome, descricao, valor, categoria] = linha.split(';');
+                            if (data && nome && descricao && valor) {
+                                novosRecibos.push({
+                                    id: Date.now() + index,
+                                    data: data.split('/').reverse().join('-'),
+                                    nome: nome.trim(),
+                                    descricao: descricao.trim(),
+                                    valor: parseFloat(valor.replace(',', '.')),
+                                    categoria: categoria ? categoria.trim() : 'Outros',
+                                    dataAdd: new Date().toISOString()
+                                });
+                            }
+                        }
+                    });
+
+                    if (novosRecibos.length > 0) {
+                        state.recibos = [...novosRecibos, ...state.recibos];
+                        saveData();
+                        render();
+                        alert(`✅ ${novosRecibos.length} recibos carregados com sucesso!`);
+                    } else {
+                        alert('❌ Nenhum recibo válido encontrado no arquivo.');
+                    }
+                } catch (error) {
+                    alert('❌ Erro ao carregar arquivo. Verifique se é um CSV válido.');
+                }
+            };
+            reader.readAsText(arquivo);
+            event.target.value = '';
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            if (!app) return;
+            
+            app.innerHTML = '';
+            
+            // Header
+            const header = document.createElement('div');
+            header.className = 'bg-gradient-to-r from-blue-600 to-purple-700 text-white p-4 shadow-lg';
+            
+            const h1 = document.createElement('h1');
+            h1.className = 'text-2xl font-bold text-center';
+            h1.textContent = 'Controle de Recibos';
+            header.appendChild(h1);
+            
+            const p = document.createElement('p');
+            p.className = 'text-center opacity-90';
+            p.textContent = 'Edna e Tânia';
+            header.appendChild(p);
+            
+            app.appendChild(header);
+            
+            // Content area
+            const content = document.createElement('div');
+            content.className = 'pb-20';
+            
+            if (state.showAddForm) {
+                content.appendChild(createFormulario());
+            } else if (state.activeTab === 'inicio') {
+                content.appendChild(createTelaInicio());
+            } else if (state.activeTab === 'relatorios') {
+                content.appendChild(createTelaRelatorios());
+            }
+            
+            app.appendChild(content);
+            
+            // Bottom menu
+            if (!state.showAddForm) {
+                const menu = document.createElement('div');
+                menu.className = 'fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg flex';
+                
+                const inicioBtn = document.createElement('button');
+                inicioBtn.className = `flex-1 py-4 flex flex-col items-center gap-1 ${state.activeTab === 'inicio' ? 'text-blue-600 bg-blue-50' : 'text-gray-600'}`;
+                inicioBtn.onclick = () => setState({ activeTab: 'inicio' });
+                
+                const inicioIcon = document.createElement('span');
+                inicioIcon.style.fontSize = '20px';
+                inicioIcon.textContent = '📄';
+                inicioBtn.appendChild(inicioIcon);
+                
+                const inicioText = document.createElement('span');
+                inicioText.className = 'text-sm font-medium';
+                inicioText.textContent = 'Início';
+                inicioBtn.appendChild(inicioText);
+                
+                const addBtn = document.createElement('button');
+                addBtn.className = 'flex-1 py-4 flex flex-col items-center gap-1 text-green-600 bg-green-50';
+                addBtn.onclick = () => setState({ showAddForm: true });
+                
+                const addIcon = document.createElement('span');
+                addIcon.style.fontSize = '20px';
+                addIcon.textContent = '➕';
+                addBtn.appendChild(addIcon);
+                
+                const addText = document.createElement('span');
+                addText.className = 'text-sm font-medium';
+                addText.textContent = 'Adicionar';
+                addBtn.appendChild(addText);
+                
+                const relBtn = document.createElement('button');
+                relBtn.className = `flex-1 py-4 flex flex-col items-center gap-1 ${state.activeTab === 'relatorios' ? 'text-purple-600 bg-purple-50' : 'text-gray-600'}`;
+                relBtn.onclick = () => setState({ activeTab: 'relatorios' });
+                
+                const relIcon = document.createElement('span');
+                relIcon.style.fontSize = '20px';
+                relIcon.textContent = '📊';
+                relBtn.appendChild(relIcon);
+                
+                const relText = document.createElement('span');
+                relText.className = 'text-sm font-medium';
+                relText.textContent = 'Relatórios';
+                relBtn.appendChild(relText);
+                
+                menu.appendChild(inicioBtn);
+                menu.appendChild(addBtn);
+                menu.appendChild(relBtn);
+                app.appendChild(menu);
+            }
+        }
+
+        function createFormulario() {
+            const container = document.createElement('div');
+            container.className = 'p-4 space-y-6';
+            
+            const title = document.createElement('h2');
+            title.className = 'text-2xl font-bold text-center text-gray-800 mb-6';
+            title.textContent = state.editingId ? 'Editar Recibo' : 'Adicionar Recibo';
+            container.appendChild(title);
+            
+            // Quem gastou
+            const quemDiv = document.createElement('div');
+            quemDiv.className = 'space-y-2';
+            
+            const quemLabel = document.createElement('label');
+            quemLabel.className = 'block text-lg font-medium text-gray-700';
+            quemLabel.textContent = 'Quem gastou?';
+            quemDiv.appendChild(quemLabel);
+            
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.className = 'flex gap-3';
+            
+            const ednaBtn = document.createElement('button');
+            ednaBtn.textContent = 'EDNA';
+            ednaBtn.className = `flex-1 py-4 px-6 text-xl font-bold rounded-lg ${state.formData.nome === 'Edna' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`;
+            ednaBtn.onclick = () => {
+                state.formData.nome = 'Edna';
+                render();
+            };
+            
+            const taniaBtn = document.createElement('button');
+            taniaBtn.textContent = 'TÂNIA';
+            taniaBtn.className = `flex-1 py-4 px-6 text-xl font-bold rounded-lg ${state.formData.nome === 'Tânia' ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-700'}`;
+            taniaBtn.onclick = () => {
+                state.formData.nome = 'Tânia';
+                render();
+            };
+            
+            buttonsDiv.appendChild(ednaBtn);
+            buttonsDiv.appendChild(taniaBtn);
+            quemDiv.appendChild(buttonsDiv);
+            container.appendChild(quemDiv);
+            
+            // Data
+            const dataDiv = document.createElement('div');
+            dataDiv.className = 'space-y-2';
+            
+            const dataLabel = document.createElement('label');
+            dataLabel.className = 'block text-lg font-medium text-gray-700';
+            dataLabel.textContent = 'Data';
+            dataDiv.appendChild(dataLabel);
+            
+            const dataInput = document.createElement('input');
+            dataInput.type = 'date';
+            dataInput.value = state.formData.data;
+            dataInput.className = 'w-full p-4 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500';
+            dataInput.addEventListener('change', (e) => {
+                state.formData.data = e.target.value;
+            });
+            dataDiv.appendChild(dataInput);
+            container.appendChild(dataDiv);
+            
+            // Descrição
+            const descDiv = document.createElement('div');
+            descDiv.className = 'space-y-2';
+            
+            const descLabel = document.createElement('label');
+            descLabel.className = 'block text-lg font-medium text-gray-700';
+            descLabel.textContent = 'O que foi comprado?';
+            descDiv.appendChild(descLabel);
+            
+            const descInput = document.createElement('input');
+            descInput.type = 'text';
+            descInput.placeholder = 'Ex: Taxi para médico, Blusa azul...';
+            descInput.value = state.formData.descricao;
+            descInput.className = 'w-full p-4 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500';
+            descInput.addEventListener('change', (e) => {
+                state.formData.descricao = e.target.value;
+            });
+            descDiv.appendChild(descInput);
+            container.appendChild(descDiv);
+            
+            // Valor
+            const valorDiv = document.createElement('div');
+            valorDiv.className = 'space-y-2';
+            
+            const valorLabel = document.createElement('label');
+            valorLabel.className = 'block text-lg font-medium text-gray-700';
+            valorLabel.textContent = 'Valor (R$)';
+            valorDiv.appendChild(valorLabel);
+            
+            const valorInput = document.createElement('input');
+            valorInput.type = 'text';
+            valorInput.inputMode = 'decimal';
+            valorInput.placeholder = '25,50';
+            valorInput.value = state.formData.valor;
+            valorInput.className = 'w-full p-4 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500';
+            
+            valorInput.addEventListener('input', (e) => {
+                let valor = e.target.value;
+                valor = valor.replace(/[^0-9,.]/g, '');
+                const virgulas = (valor.match(/[,.]/g) || []).length;
+                if (virgulas > 1) {
+                    valor = valor.substring(0, valor.lastIndexOf(',')) + valor.substring(valor.lastIndexOf(',') + 1).replace(/[,.]/g, '');
+                }
+                e.target.value = valor;
+            });
+            
+            valorInput.addEventListener('change', (e) => {
+                let valor = e.target.value;
+                if (valor) {
+                    const valorNumerico = parseFloat(valor.replace(',', '.'));
+                    if (!isNaN(valorNumerico) && valorNumerico > 0) {
+                        valor = valorNumerico.toFixed(2).replace('.', ',');
+                        e.target.value = valor;
+                    }
+                }
+                state.formData.valor = valor;
+            });
+            
+            valorDiv.appendChild(valorInput);
+            container.appendChild(valorDiv);
+            
+            // Categoria
+            const catDiv = document.createElement('div');
+            catDiv.className = 'space-y-2';
+            
+            const catLabel = document.createElement('label');
+            catLabel.className = 'block text-lg font-medium text-gray-700';
+            catLabel.textContent = 'Categoria';
+            catDiv.appendChild(catLabel);
+            
+            const catSelect = document.createElement('select');
+            catSelect.value = state.formData.categoria;
+            catSelect.className = 'w-full p-4 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500';
+            catSelect.addEventListener('change', (e) => {
+                state.formData.categoria = e.target.value;
+            });
+            
+            categorias.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                if (cat === state.formData.categoria) option.selected = true;
+                catSelect.appendChild(option);
+            });
+            
+            catDiv.appendChild(catSelect);
+            container.appendChild(catDiv);
+            
+            // Foto do Recibo
+            const fotoDiv = document.createElement('div');
+            fotoDiv.className = 'space-y-2';
+            
+            const fotoLabel = document.createElement('label');
+            fotoLabel.className = 'block text-lg font-medium text-gray-700';
+            fotoLabel.textContent = 'Foto do Recibo (opcional)';
+            fotoDiv.appendChild(fotoLabel);
+            
+            if (state.formData.foto || state.formData.fotoNome) {
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center';
+                
+                if (state.formData.foto) {
+                    const img = document.createElement('img');
+                    img.src = state.formData.foto;
+                    img.className = 'max-w-full max-h-48 mx-auto rounded';
+                    previewDiv.appendChild(img);
+                } else if (state.formData.fotoNome) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'text-gray-600';
+                    placeholder.textContent = `📷 Foto salva: ${state.formData.fotoNome}`;
+                    previewDiv.appendChild(placeholder);
+                }
+                
+                const buttonGroup = document.createElement('div');
+                buttonGroup.className = 'flex gap-2 mt-3';
+                
+                const verBtn = document.createElement('button');
+                verBtn.textContent = '👁️ Ver Foto';
+                verBtn.className = 'flex-1 py-2 px-4 bg-blue-500 text-white rounded-lg font-bold';
+                verBtn.onclick = () => {
+                    if (state.formData.foto) {
+                        const popup = window.open('', '_blank');
+                        popup.document.write(`<img src="${state.formData.foto}" style="max-width:100%; max-height:100vh;">`);
+                    } else if (state.formData.fotoNome) {
+                        carregarFotoInteligente(state.formData.fotoNome).then(dados => {
+                            if (dados) {
+                                const popup = window.open('', '_blank');
+                                popup.document.write(`<img src="${dados}" style="max-width:100%; max-height:100vh;">`);
+                            }
+                        });
+                    }
+                };
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '🗑️ Remover';
+                removeBtn.className = 'flex-1 py-2 px-4 bg-red-500 text-white rounded-lg font-bold';
+                removeBtn.onclick = removerFoto;
+                
+                buttonGroup.appendChild(verBtn);
+                buttonGroup.appendChild(removeBtn);
+                previewDiv.appendChild(buttonGroup);
+                
+                fotoDiv.appendChild(previewDiv);
+            } else {
+                const fotoBtn = document.createElement('button');
+                fotoBtn.textContent = '📷 TIRAR FOTO DO RECIBO';
+                fotoBtn.type = 'button';
+                fotoBtn.className = 'w-full py-4 bg-blue-500 text-white text-lg font-bold rounded-lg border-2 border-dashed border-blue-300 hover:bg-blue-600';
+                fotoBtn.onclick = tirarFoto;
+                fotoDiv.appendChild(fotoBtn);
+            }
+            
+            container.appendChild(fotoDiv);
+            
+            // Botões
+            const btnDiv = document.createElement('div');
+            btnDiv.className = 'flex gap-3 pt-4';
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'CANCELAR';
+            cancelBtn.className = 'flex-1 py-4 px-6 bg-gray-500 text-white text-xl font-bold rounded-lg';
+            cancelBtn.onclick = () => setState({ 
+                showAddForm: false, 
+                editingId: null,
+                formData: {
+                    nome: '',
+                    data: new Date().toISOString().split('T')[0],
+                    descricao: '',
+                    valor: '',
+                    categoria: 'Outros',
+                    foto: null,
+                    fotoNome: ''
+                }
+            });
+            
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = state.editingId ? 'SALVAR ALTERAÇÕES' : 'SALVAR';
+            saveBtn.className = `flex-1 py-4 px-6 text-xl font-bold rounded-lg ${state.editingId ? 'bg-orange-500' : 'bg-green-500'} text-white`;
+            saveBtn.onclick = handleAddRecibo;
+            
+            btnDiv.appendChild(cancelBtn);
+            btnDiv.appendChild(saveBtn);
+            container.appendChild(btnDiv);
+            
+            return container;
+        }
+
+        function createTelaInicio() {
+            const recibosContextuais = getRecibosContextuais();
+            const totaisContextuais = getTotaisPorPessoa(recibosContextuais);
+            const totalGeral = totaisContextuais.Edna + totaisContextuais.Tânia;
+
+            const container = document.createElement('div');
+            container.className = 'p-4 space-y-6';
+            
+            // Botão Adicionar
+            const addBtn = document.createElement('button');
+            addBtn.className = 'w-full py-6 bg-green-500 text-white text-2xl font-bold rounded-lg flex items-center justify-center gap-3 shadow-lg';
+            addBtn.onclick = () => setState({ showAddForm: true });
+            
+            const addIcon = document.createElement('span');
+            addIcon.style.fontSize = '24px';
+            addIcon.textContent = '➕';
+            addBtn.appendChild(addIcon);
+            
+            const addText = document.createElement('span');
+            addText.textContent = 'ADICIONAR RECIBO';
+            addBtn.appendChild(addText);
+            
+            container.appendChild(addBtn);
+            
+            // Navegação
+            const navDiv = document.createElement('div');
+            navDiv.className = 'bg-white rounded-lg shadow-lg p-4';
+            
+            const navControls = document.createElement('div');
+            navControls.className = 'flex items-center justify-between mb-4';
+            
+            const leftBtn = document.createElement('button');
+            leftBtn.textContent = '◀️';
+            leftBtn.className = 'p-3 bg-gray-100 rounded-lg text-xl';
+            leftBtn.onclick = () => navigateDate(-1);
+            
+            const rightBtn = document.createElement('button');
+            rightBtn.textContent = '▶️';
+            rightBtn.className = 'p-3 bg-gray-100 rounded-lg text-xl';
+            rightBtn.onclick = () => navigateDate(1);
+            
+            const dateTitle = document.createElement('h2');
+            dateTitle.className = 'text-xl font-bold text-gray-800 text-center flex-1 mx-4';
+            dateTitle.textContent = getDateLabel();
+            
+            navControls.appendChild(leftBtn);
+            navControls.appendChild(dateTitle);
+            navControls.appendChild(rightBtn);
+            navDiv.appendChild(navControls);
+            
+            const toggleDiv = document.createElement('div');
+            toggleDiv.className = 'flex gap-2';
+            
+            const mesBtn = document.createElement('button');
+            mesBtn.textContent = 'VER MÊS';
+            mesBtn.className = `flex-1 py-2 px-4 text-sm font-bold rounded-lg ${state.viewMode === 'mes' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`;
+            mesBtn.onclick = () => setState({ viewMode: 'mes' });
+            
+            const anoBtn = document.createElement('button');
+            anoBtn.textContent = 'VER ANO';
+            anoBtn.className = `flex-1 py-2 px-4 text-sm font-bold rounded-lg ${state.viewMode === 'ano' ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-700'}`;
+            anoBtn.onclick = () => setState({ viewMode: 'ano' });
+            
+            toggleDiv.appendChild(mesBtn);
+            toggleDiv.appendChild(anoBtn);
+            navDiv.appendChild(toggleDiv);
+            container.appendChild(navDiv);
+            
+            // Resumo
+            const resumoDiv = document.createElement('div');
+            resumoDiv.className = 'bg-white rounded-lg shadow-lg p-6';
+            
+            const resumoTitle = document.createElement('h3');
+            resumoTitle.className = 'text-lg font-bold text-center text-gray-800 mb-4';
+            resumoTitle.textContent = `Resumo - ${getDateLabel()}`;
+            resumoDiv.appendChild(resumoTitle);
+            
+            const resumoContent = document.createElement('div');
+            resumoContent.className = 'space-y-3';
+            
+            // Edna
+            const ednaDiv = document.createElement('div');
+            ednaDiv.className = 'flex justify-between items-center p-3 bg-blue-50 rounded-lg';
+            
+            const ednaLabel = document.createElement('span');
+            ednaLabel.className = 'text-lg font-medium text-blue-700';
+            ednaLabel.textContent = 'Edna:';
+            ednaDiv.appendChild(ednaLabel);
+            
+            const ednaValue = document.createElement('span');
+            ednaValue.className = 'text-lg font-bold text-blue-700';
+            ednaValue.textContent = `R$ ${totaisContextuais.Edna.toFixed(2).replace('.', ',')} (${recibosContextuais.filter(r => r.nome === 'Edna').length})`;
+            ednaDiv.appendChild(ednaValue);
+            
+            resumoContent.appendChild(ednaDiv);
+            
+            // Tânia
+            const taniaDiv = document.createElement('div');
+            taniaDiv.className = 'flex justify-between items-center p-3 bg-pink-50 rounded-lg';
+            
+            const taniaLabel = document.createElement('span');
+            taniaLabel.className = 'text-lg font-medium text-pink-700';
+            taniaLabel.textContent = 'Tânia:';
+            taniaDiv.appendChild(taniaLabel);
+            
+            const taniaValue = document.createElement('span');
+            taniaValue.className = 'text-lg font-bold text-pink-700';
+            taniaValue.textContent = `R$ ${totaisContextuais.Tânia.toFixed(2).replace('.', ',')} (${recibosContextuais.filter(r => r.nome === 'Tânia').length})`;
+            taniaDiv.appendChild(taniaValue);
+            
+            resumoContent.appendChild(taniaDiv);
+            
+            // Total
+            const totalDiv = document.createElement('div');
+            totalDiv.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg border-2 border-gray-300';
+            
+            const totalLabel = document.createElement('span');
+            totalLabel.className = 'text-lg font-bold text-gray-700';
+            totalLabel.textContent = 'TOTAL:';
+            totalDiv.appendChild(totalLabel);
+            
+            const totalValue = document.createElement('span');
+            totalValue.className = 'text-2xl font-bold text-gray-800';
+            totalValue.textContent = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+            totalDiv.appendChild(totalValue);
+            
+            resumoContent.appendChild(totalDiv);
+            resumoDiv.appendChild(resumoContent);
+            container.appendChild(resumoDiv);
+            
+            // Lista de recibos
+            const listaDiv = document.createElement('div');
+            listaDiv.className = 'space-y-3';
+            
+            const listaTitle = document.createElement('h3');
+            listaTitle.className = 'text-lg font-bold text-gray-800';
+            listaTitle.textContent = `Recibos ${state.viewMode === 'mes' ? 'do Mês' : 'do Ano'}`;
+            listaDiv.appendChild(listaTitle);
+            
+            if (recibosContextuais.length === 0) {
+                const emptyMsg = document.createElement('p');
+                emptyMsg.className = 'text-center text-gray-600 py-8';
+                emptyMsg.textContent = `Nenhum recibo encontrado para ${getDateLabel()}.`;
+                listaDiv.appendChild(emptyMsg);
+            } else {
+                recibosContextuais
+                    .sort((a, b) => new Date(b.data) - new Date(a.data))
+                    .forEach(recibo => {
+                        const reciboDiv = document.createElement('div');
+                        reciboDiv.className = 'bg-white rounded-lg shadow p-4 border-l-4 border-l-blue-500';
+                        
+                        const reciboContent = document.createElement('div');
+                        reciboContent.className = 'flex justify-between items-start';
+                        
+                        const leftDiv = document.createElement('div');
+                        leftDiv.className = 'flex-1';
+                        
+                        const headerDiv = document.createElement('div');
+                        headerDiv.className = 'flex items-center gap-2 mb-1';
+                        
+                        const nomeSpan = document.createElement('span');
+                        nomeSpan.className = `px-2 py-1 rounded text-sm font-bold ${recibo.nome === 'Edna' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`;
+                        nomeSpan.textContent = recibo.nome;
+                        headerDiv.appendChild(nomeSpan);
+                        
+                        const dataSpan = document.createElement('span');
+                        dataSpan.className = 'text-sm text-gray-600';
+                        dataSpan.textContent = new Date(recibo.data).toLocaleDateString('pt-BR');
+                        headerDiv.appendChild(dataSpan);
+                        
+                        if (recibo.fotoNome) {
+                            const fotoIcon = document.createElement('span');
+                            fotoIcon.className = 'text-lg';
+                            fotoIcon.textContent = '📷';
+                            headerDiv.appendChild(fotoIcon);
+                        }
+                        
+                        leftDiv.appendChild(headerDiv);
+                        
+                        const descP = document.createElement('p');
+                        descP.className = 'text-gray-800 font-medium';
+                        descP.textContent = recibo.descricao;
+                        leftDiv.appendChild(descP);
+                        
+                        const catP = document.createElement('p');
+                        catP.className = 'text-sm text-gray-600';
+                        catP.textContent = recibo.categoria;
+                        leftDiv.appendChild(catP);
+                        
+                        const rightDiv = document.createElement('div');
+                        rightDiv.className = 'text-right';
+                        
+                        const valorP = document.createElement('p');
+                        valorP.className = 'text-lg font-bold text-green-600 mb-2';
+                        valorP.textContent = `R$ ${recibo.valor.toFixed(2).replace('.', ',')}`;
+                        rightDiv.appendChild(valorP);
+                        
+                        const buttonsDiv = document.createElement('div');
+                        buttonsDiv.className = 'flex gap-2';
+                        
+                        if (recibo.fotoNome) {
+                            const verFotoBtn = document.createElement('button');
+                            verFotoBtn.textContent = '📷';
+                            verFotoBtn.className = 'text-blue-500 text-sm px-2 py-1 bg-blue-50 rounded font-bold';
+                            verFotoBtn.onclick = () => {
+                                carregarFotoInteligente(recibo.fotoNome).then(dados => {
+                                    if (dados) {
+                                        const popup = window.open('', '_blank');
+                                        popup.document.write(`
+                                            <html>
+                                                <head><title>Foto do Recibo - ${recibo.descricao}</title></head>
+                                                <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f3f4f6;">
+                                                    <img src="${dados}" style="max-width:100%; max-height:100vh; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                                                </body>
+                                            </html>
+                                        `);
+                                    } else {
+                                        alert('Foto não encontrada');
+                                    }
+                                }).catch(() => {
+                                    alert('Erro ao carregar foto');
+                                });
+                            };
+                            buttonsDiv.appendChild(verFotoBtn);
+                        }
+                        
+                        const editBtn = document.createElement('button');
+                        editBtn.textContent = 'Editar';
+                        editBtn.className = 'text-blue-500 text-sm px-2 py-1 bg-blue-50 rounded font-bold';
+                        editBtn.onclick = () => editRecibo(recibo.id);
+                        buttonsDiv.appendChild(editBtn);
+                        
+                        const delBtn = document.createElement('button');
+                        delBtn.textContent = 'Excluir';
+                        delBtn.className = 'text-red-500 text-sm px-2 py-1 bg-red-50 rounded font-bold';
+                        delBtn.onclick = () => deleteRecibo(recibo.id);
+                        buttonsDiv.appendChild(delBtn);
+                        
+                        rightDiv.appendChild(buttonsDiv);
+                        
+                        reciboContent.appendChild(leftDiv);
+                        reciboContent.appendChild(rightDiv);
+                        reciboDiv.appendChild(reciboContent);
+                        listaDiv.appendChild(reciboDiv);
+                    });
+            }
+            
+            container.appendChild(listaDiv);
+            return container;
+        }
+
+        function createTelaRelatorios() {
+            const container = document.createElement('div');
+            container.className = 'p-4 space-y-6';
+            
+            const title = document.createElement('h2');
+            title.className = 'text-2xl font-bold text-center text-gray-800';
+            title.textContent = 'Relatórios';
+            container.appendChild(title);
+            
+            // Info período
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg shadow-lg p-4 text-white text-center';
+            
+            const infoP1 = document.createElement('p');
+            infoP1.className = 'text-lg font-bold';
+            infoP1.textContent = 'Visualizando:';
+            infoDiv.appendChild(infoP1);
+            
+            const infoP2 = document.createElement('p');
+            infoP2.className = 'text-xl';
+            infoP2.textContent = getDateLabel();
+            infoDiv.appendChild(infoP2);
+            
+            const infoP3 = document.createElement('p');
+            infoP3.className = 'text-sm opacity-90';
+            infoP3.textContent = `${getRecibosContextuais().length} recibos deste período`;
+            infoDiv.appendChild(infoP3);
+            
+            container.appendChild(infoDiv);
+            
+            // Compartilhamento
+            const backupDiv = document.createElement('div');
+            backupDiv.className = 'bg-gradient-to-r from-orange-500 to-red-600 rounded-lg shadow-lg p-6 text-white';
+            
+            const backupTitle = document.createElement('h3');
+            backupTitle.className = 'text-xl font-bold mb-2 text-center';
+            backupTitle.textContent = '📤 Backup Completo';
+            backupDiv.appendChild(backupTitle);
+            
+            const backupDesc = document.createElement('p');
+            backupDesc.className = 'text-center text-sm mb-4 opacity-90';
+            backupDesc.textContent = `ZIP com todos os ${state.recibos.length} recibos + ${state.recibos.filter(r => r.fotoNome).length} fotos`;
+            backupDiv.appendChild(backupDesc);
+            
+            const backupBtn = document.createElement('button');
+            backupBtn.className = 'w-full py-4 bg-white text-orange-600 text-xl font-bold rounded-lg flex items-center justify-center gap-3';
+            backupBtn.onclick = compartilharWhatsApp;
+            
+            const backupIcon = document.createElement('span');
+            backupIcon.style.fontSize = '20px';
+            backupIcon.textContent = '📤';
+            backupBtn.appendChild(backupIcon);
+            
+            const backupText = document.createElement('span');
+            backupText.textContent = 'COMPARTILHAR ZIP';
+            backupBtn.appendChild(backupText);
+            
+            backupDiv.appendChild(backupBtn);
+            
+            const backupNote = document.createElement('p');
+            backupNote.className = 'text-center text-sm mt-2 opacity-90';
+            backupNote.textContent = 'Para WhatsApp, Email ou outras redes';
+            backupDiv.appendChild(backupNote);
+            
+            container.appendChild(backupDiv);
+            
+            // Outras opções
+            const outrasDiv = document.createElement('div');
+            outrasDiv.className = 'bg-white rounded-lg shadow p-4 space-y-3';
+            
+            const outrasTitle = document.createElement('h3');
+            outrasTitle.className = 'text-lg font-bold text-gray-800 mb-3';
+            outrasTitle.textContent = 'Outras Opções';
+            outrasDiv.appendChild(outrasTitle);
+            
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'w-full py-3 bg-blue-500 text-white text-lg font-bold rounded-lg flex items-center justify-center gap-2';
+            downloadBtn.onclick = () => exportarCSV('todos');
+            
+            const downloadIcon = document.createElement('span');
+            downloadIcon.style.fontSize = '18px';
+            downloadIcon.textContent = '⬇️';
+            downloadBtn.appendChild(downloadIcon);
+            
+            const downloadText = document.createElement('span');
+            downloadText.textContent = 'BAIXAR CSV COMPLETO';
+            downloadBtn.appendChild(downloadText);
+            
+            outrasDiv.appendChild(downloadBtn);
+            
+            // Botão Backup Manual
+            const backupManualBtn = document.createElement('button');
+            backupManualBtn.className = 'w-full py-3 bg-orange-500 text-white text-lg font-bold rounded-lg flex items-center justify-center gap-2';
+            backupManualBtn.onclick = () => {
+                const nomeBackup = criarBackupSemanal();
+                if (nomeBackup) {
+                    alert(`✅ Backup criado: ${nomeBackup}`);
+                }
+            };
+            
+            const backupManualIcon = document.createElement('span');
+            backupManualIcon.style.fontSize = '18px';
+            backupManualIcon.textContent = '💾';
+            backupManualBtn.appendChild(backupManualIcon);
+            
+            const backupManualText = document.createElement('span');
+            backupManualText.textContent = 'CRIAR BACKUP MANUAL';
+            backupManualBtn.appendChild(backupManualText);
+            
+            outrasDiv.appendChild(backupManualBtn);
+            
+            const exportAtualBtn = document.createElement('button');
+            exportAtualBtn.className = 'w-full py-2 bg-gray-400 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2';
+            exportAtualBtn.onclick = () => exportarCSV('atual');
+            
+            const exportIcon = document.createElement('span');
+            exportIcon.style.fontSize = '16px';
+            exportIcon.textContent = '⬇️';
+            exportAtualBtn.appendChild(exportIcon);
+            
+            const exportText = document.createElement('span');
+            exportText.textContent = `Exportar Apenas ${state.viewMode === 'mes' ? 'Mês' : 'Ano'} Atual`;
+            exportAtualBtn.appendChild(exportText);
+            
+            outrasDiv.appendChild(exportAtualBtn);
+            
+            // Carregar backup
+            const uploadLabel = document.createElement('label');
+            uploadLabel.className = 'w-full py-3 bg-purple-500 text-white text-lg font-bold rounded-lg flex items-center justify-center gap-2 cursor-pointer';
+            
+            const uploadIcon = document.createElement('span');
+            uploadIcon.style.fontSize = '18px';
+            uploadIcon.textContent = '⬆️';
+            uploadLabel.appendChild(uploadIcon);
+            
+            const uploadText = document.createElement('span');
+            uploadText.textContent = 'IMPORTAR CSV';
+            uploadLabel.appendChild(uploadText);
+            
+            const uploadInput = document.createElement('input');
+            uploadInput.type = 'file';
+            uploadInput.accept = '.csv';
+            uploadInput.className = 'hidden';
+            uploadInput.addEventListener('change', carregarBackup);
+            uploadLabel.appendChild(uploadInput);
+            
+            outrasDiv.appendChild(uploadLabel);
+            container.appendChild(outrasDiv);
+            
+            // Estatísticas
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'bg-white rounded-lg shadow-lg p-6';
+            
+            const statsTitle = document.createElement('h3');
+            statsTitle.className = 'text-lg font-bold text-gray-800 mb-4';
+            statsTitle.textContent = 'Estatísticas Gerais';
+            statsDiv.appendChild(statsTitle);
+            
+            const statsGrid = document.createElement('div');
+            statsGrid.className = 'grid grid-cols-2 gap-4 text-center';
+            
+            const totalRecibos = document.createElement('div');
+            totalRecibos.className = 'p-3 bg-gray-50 rounded-lg';
+            
+            const totalRecibosPNum = document.createElement('p');
+            totalRecibosPNum.className = 'text-2xl font-bold text-blue-600';
+            totalRecibosPNum.textContent = state.recibos.length.toString();
+            totalRecibos.appendChild(totalRecibosPNum);
+            
+            const totalRecibosPText = document.createElement('p');
+            totalRecibosPText.className = 'text-sm text-gray-600';
+            totalRecibosPText.textContent = 'Total de Recibos';
+            totalRecibos.appendChild(totalRecibosPText);
+            
+            statsGrid.appendChild(totalRecibos);
+            
+            const valorTotal = document.createElement('div');
+            valorTotal.className = 'p-3 bg-gray-50 rounded-lg';
+            
+            const valorTotalPNum = document.createElement('p');
+            valorTotalPNum.className = 'text-2xl font-bold text-green-600';
+            valorTotalPNum.textContent = `R$ ${state.recibos.reduce((acc, r) => acc + r.valor, 0).toFixed(2).replace('.', ',')}`;
+            valorTotal.appendChild(valorTotalPNum);
+            
+            const valorTotalPText = document.createElement('p');
+            valorTotalPText.className = 'text-sm text-gray-600';
+            valorTotalPText.textContent = 'Valor Total Geral';
+            valorTotal.appendChild(valorTotalPText);
+            
+            statsGrid.appendChild(valorTotal);
+            statsDiv.appendChild(statsGrid);
+            container.appendChild(statsDiv);
+            
+            return container;
+        }
+
+        // Sistema de Backup Automático
+        function iniciarTimerBackupSemanal() {
+            try {
+                // Verifica se já passou uma semana desde o último backup
+                const ultimoBackup = localStorage.getItem('ultimo-backup-timestamp');
+                const agora = Date.now();
+                const umaSemana = 7 * 24 * 60 * 60 * 1000; // 7 dias em milissegundos
+                
+                if (!ultimoBackup || (agora - parseInt(ultimoBackup)) >= umaSemana) {
+                    // Faz backup automaticamente se passou uma semana
+                    setTimeout(() => {
+                        console.log('Executando backup automático semanal...');
+                        const nomeBackup = criarBackupSemanal();
+                        if (nomeBackup) {
+                            localStorage.setItem('ultimo-backup-timestamp', agora.toString());
+                            console.log('✅ Backup automático criado:', nomeBackup);
+                        }
+                    }, 5000); // Aguarda 5 segundos após inicialização
+                }
+                
+                // Configura timer para próxima verificação (verifica a cada hora)
+                setInterval(() => {
+                    const ultimoBackupAtual = localStorage.getItem('ultimo-backup-timestamp');
+                    const agoraAtual = Date.now();
+                    
+                    if (!ultimoBackupAtual || (agoraAtual - parseInt(ultimoBackupAtual)) >= umaSemana) {
+                        console.log('Executando backup automático semanal...');
+                        const nomeBackup = criarBackupSemanal();
+                        if (nomeBackup) {
+                            localStorage.setItem('ultimo-backup-timestamp', agoraAtual.toString());
+                            console.log('✅ Backup automático criado:', nomeBackup);
+                        }
+                    }
+                }, 60 * 60 * 1000); // Verifica a cada hora
+                
+            } catch (e) {
+                console.log('Erro ao iniciar timer de backup:', e);
+            }
+        }
+
+        // Service Worker para PWA
+        function registrarServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                const CACHE_NAME = 'recibos-v1';
+                const urlsToCache = ['/'];
+                
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME)
+                        .then(cache => cache.addAll(urlsToCache))
+                    );
+                });
+                
+                self.addEventListener('fetch', event => {
+                    event.respondWith(
+                        caches.match(event.request)
+                        .then(response => response || fetch(event.request))
+                    );
+                });
+                `;
+                
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                
+                navigator.serviceWorker.register(swUrl)
+                    .then(registration => console.log('✅ Service Worker registrado'))
+                    .catch(error => console.log('❌ Erro no Service Worker:', error));
+            }
+        }
+
+        // Detectar instalação PWA
+        function mostrarBotaoInstalar() {
+            let deferredPrompt;
+            
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                
+                // Mostrar botão de instalar
+                const installBtn = document.createElement('button');
+                installBtn.textContent = '📱 INSTALAR APP';
+                installBtn.className = 'fixed bottom-20 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg font-bold z-50 animate-bounce';
+                installBtn.style.cssText = 'position: fixed; bottom: 80px; right: 16px; background: #10B981; color: white; padding: 8px 16px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-weight: bold; z-index: 50; border: none; font-size: 14px;';
+                
+                installBtn.onclick = async () => {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        console.log('✅ PWA instalada!');
+                        installBtn.remove();
+                    }
+                    deferredPrompt = null;
+                };
+                
+                document.body.appendChild(installBtn);
+                
+                // Remove botão após 15 segundos
+                setTimeout(() => {
+                    if (installBtn.parentNode) {
+                        installBtn.remove();
+                    }
+                }, 15000);
+            });
+        }
+
+        // Inicialização
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                loadData();
+                render();
+                iniciarTimerBackupSemanal();
+                registrarServiceWorker();
+                mostrarBotaoInstalar();
+            });
+        } else {
+            loadData();
+            render();
+            iniciarTimerBackupSemanal();
+            registrarServiceWorker();
+            mostrarBotaoInstalar();
+        }
+    </script>
+</body>
+</html>
